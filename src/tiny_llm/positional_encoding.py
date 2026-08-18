@@ -36,14 +36,24 @@ class RoPE:
         else:
             cache = self.cache[:seq_len]
 
+        # TODO: This should be for traditional RoPE only
         x_shaped = mx.reshape(x, (*x.shape[:-1], -1, 2))
         cache_shaped = mx.reshape(cache, (-1, x_shaped.shape[1], 1, x_shaped.shape[3], 2))
 
-        x_out = mx.stack([
-            x_shaped[..., 0] * cache_shaped[..., 0]
-            - x_shaped[..., 1] * cache_shaped[..., 1],
-            x_shaped[..., 1] * cache_shaped[..., 0]
-            + x_shaped[..., 0] * cache_shaped[..., 1]
-        ], axis=-1)
+
+        if self.traditional:
+            x_out = mx.stack([
+                # cos = 0, sin = 1
+                x_shaped[..., 0] * cache_shaped[..., 0] - x_shaped[..., 1] * cache_shaped[..., 1],
+                x_shaped[..., 1] * cache_shaped[..., 0] + x_shaped[..., 0] * cache_shaped[..., 1]
+            ], axis=-1)
+        else:
+            x_1 = x[..., : self.dims // 2]
+            x_2 = x[..., self.dims // 2 :]
+
+            out_1 = x_1 * cache_shaped[..., 0] - x_2 * cache_shaped[..., 1]
+            out_2 = x_1 * cache_shaped[..., 1] + x_2 * cache_shaped[..., 0]
+
+            return mx.concatenate([out_1, out_2], axis=-1)
 
         return x_out.flatten(3)
