@@ -75,8 +75,25 @@ def scaled_dot_product_attention_grouped(
     scale: float | None = None,
     mask: mx.array | str | None = None,
 ) -> mx.array:
-    pass
+    H_q = query.shape[-3] # query heads
+    H = key.shape[-3] # kv heads to be shared
 
+    if scale is None:
+        scale = 1 / math.sqrt(key.shape[-1])
+
+    query = mx.reshape(query, (*query.shape[:-3], H, -1, query.shape[-2], query.shape[-1]))
+    key = mx.expand_dims(key, axis=-3)
+    value = mx.expand_dims(value, axis=-3)
+
+    scores = (query @ mx.transpose(key, axes=(*range(key.ndim - 2), -1, -2))) * scale
+
+    if mask is not None:
+        mask = mx.reshape(mask, (*mask.shape[:-3], H, -1, mask.shape[-2], mask.shape[-1]))
+        scores = scores + mask
+
+    attn = softmax(scores, axis=-1) @ value
+
+    return mx.reshape(attn, (*attn.shape[:-4], H_q, attn.shape[-2], attn.shape[-1]))
 
 def paged_attention(
     query: mx.array,
