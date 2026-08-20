@@ -8,4 +8,4 @@ class RMSNorm:
 
     def __call__(self, x: mx.array) -> mx.array:
         x = x.astype(mx.float32)
-        return ((x / mx.sqrt(mx.mean(x ** 2, axis=1, keepdims=True) + self.eps))) * self.weight
+        return ((x / mx.sqrt(mx.mean(x ** 2, axis=-1, keepdims=True) + self.eps))) * self.weight
