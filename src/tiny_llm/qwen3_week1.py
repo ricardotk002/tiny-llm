@@ -116,14 +116,59 @@ class Qwen3TransformerBlock:
         max_seq_len: int = 32768,
         theta: int = 1000000,
     ):
-        pass
+        self.num_attention_heads = num_attention_heads
+        self.num_kv_heads = num_kv_heads
+        self.hidden_size = hidden_size
+        self.head_dim = head_dim
+        self.intermediate_size = intermediate_size
+        self.rms_norm_eps = rms_norm_eps
+        self.wq = wq
+        self.wk = wk
+        self.wv = wv
+        self.wo = wo
+        self.q_norm = q_norm
+        self.k_norm = k_norm
+        self.w_gate = w_gate
+        self.w_up = w_up
+        self.w_down = w_down
+        self.w_input_layernorm = w_input_layernorm
+        self.w_post_attention_layernorm = w_post_attention_layernorm
+        self.max_seq_len = max_seq_len
+        self.theta = theta
 
     def __call__(
         self,
         x: mx.array,
         mask: mx.array | str | None = None,
     ) -> mx.array:
-        pass
+        x1 = RMSNorm(self.head_dim, self.w_input_layernorm, self.rms_norm_eps)(x)
+        x1 = Qwen3MultiHeadAttention(
+            hidden_size=self.hidden_size,
+            num_heads=self.num_attention_heads,
+            num_kv_heads=self.num_kv_heads,
+            head_dim=self.head_dim,
+            wq=self.wq,
+            wk=self.wk,
+            wv=self.wv,
+            wo=self.wo,
+            q_norm=self.q_norm,
+            k_norm=self.k_norm,
+            max_seq_len=self.max_seq_len,
+            theta=self.theta,
+            rms_norm_eps=self.rms_norm_eps
+        )(x1, mask)
+        x = x + x1 # add residual
+        x2 = RMSNorm(self.head_dim, self.w_post_attention_layernorm, self.rms_norm_eps)(x)
+        x2 = Qwen3MLP(
+            dim=self.head_dim,
+            hidden_dim=self.hidden_size,
+            w_gate=self.w_gate,
+            w_up=self.w_up,
+            w_down=self.w_down
+        )(x2)
+        x = x + x2 # add residual
+
+        return x
 
 
 class Qwen3ModelWeek1:
