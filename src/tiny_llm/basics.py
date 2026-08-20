@@ -15,4 +15,6 @@ def linear(
     return x @ w.T if bias is None else x @ w.T + bias
 
 def silu(x: mx.array) -> mx.array:
-    pass
+    # return mx.where(x >= 0, x / (1 + mx.exp(-x)), x * mx.exp(x) / (1 + mx.exp(x)))
+    z = mx.exp(-abs(x)) # Prevents exp(-x) to become exp(large positive)
+    return mx.where(x >= 0, x / (1 + z), x * z / (1 + z))
