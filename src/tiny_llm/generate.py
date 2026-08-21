@@ -19,8 +19,21 @@ def simple_generate(
     sampler: Callable[[mx.array], mx.array] | None,
 ) -> None:
     def _step(model, y):
-        pass
+        y = mx.expand_dims(mx.array(y), 0)
+        out = model(y)
+        logits = out[:, -1, :] # only last token's logits
 
+        return sampler(logits)
+
+    tokens = tokenizer.encode(prompt)
+    detokenizer = tokenizer.detokenizer # it creates a new detokenizer on each call, weird
+
+    tok = _step(model, tokens) # prefill
+    while tok.item() != tokenizer.eos_token_id:
+        detokenizer.add_token(tok.item())
+        print(detokenizer.last_segment, end="", flush=True)
+        tokens.append(tok.item())
+        tok = _step(model, tokens)
 
 def simple_generate_with_kv_cache(
     model: Qwen3ModelWeek2, tokenizer: TokenizerWrapper, prompt: str
