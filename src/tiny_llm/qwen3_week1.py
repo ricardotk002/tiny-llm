@@ -54,8 +54,8 @@ class Qwen3MultiHeadAttention:
         k = mx.reshape(k, (*k.shape[:-1], self.num_kv_heads, -1))
         v = mx.reshape(v, (*v.shape[:-1], self.num_kv_heads, -1))
 
-        q = mx.fast.rms_norm(q, self.q_norm, eps=self.rms_norm_eps)
-        k = mx.fast.rms_norm(k, self.k_norm, eps=self.rms_norm_eps)
+        q = RMSNorm(self.head_dim, self.q_norm, eps=self.rms_norm_eps)(q)
+        k = RMSNorm(self.head_dim, self.k_norm, eps=self.rms_norm_eps)(k)
 
         q = RoPE(self.head_dim, self.max_seq_len, self.theta)(q, slice(0, L))
         k = RoPE(self.head_dim, self.max_seq_len, self.theta)(k, slice(0, L))
